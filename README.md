@@ -138,4 +138,4 @@ src/main/resources/
 
 ## Autor
 
-Carlos Díaz
+Carlos Andres Diaz Mendez | Maria Jose Palomino | Manuel Carreño
