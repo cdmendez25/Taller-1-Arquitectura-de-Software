@@ -7,6 +7,8 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 import javax.swing.JFrame;
 
@@ -17,111 +19,118 @@ public class Game extends Canvas implements Runnable {
 	public static final int HEIGHT = WIDTH / 12 * 9;
 	public static final int SCALE = 2;
 	public final String TITLE = "Space War 2D";
-	
+
 	private boolean running = false;
 	private Thread thread;
 	private BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-	
-	
-	private SpritesImageLoader sprites;
-	
-	//Game components
+
+	// Game components
 	private Player player;
 	private BulletController bullets;
-	private BackgroundRenderer backgRenderer;
-	
-	
-	public void init(){
+	private GameBackgroundRenderer backgRenderer;
+
+	public void init() {
 		requestFocus();
-		
-		
-		sprites = new SpritesImageLoader("/sprites.png");
-		try {			
-			sprites.loadImage();
+
+		// Load configuration
+		Properties config = new Properties();
+		try (InputStream input = getClass().getResourceAsStream("/config.properties")) {
+			config.load(input);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
+		String style = config.getProperty("visual.style", "sprite");
+
+		// Create factory based on configuration
+		GameElementFactory factory;
+		if ("vector".equalsIgnoreCase(style)) {
+			factory = new VectorElementFactory();
+		} else {
+			factory = new SpriteElementFactory();
+		}
+
 		// Add keyboard listener
 		addKeyListener(new InputHandler(this));
-		
-		// Initialize game components.
-		
-		
-		// Set player position at the bottom center.
-		player = new Player((WIDTH * SCALE - Player.WIDTH) / 2, HEIGHT * SCALE - 50 , this);
+
+		// Initialize game components using the factory
 		bullets = new BulletController();
-		backgRenderer=new BackgroundRenderer();
+		backgRenderer = factory.createBackgroundRenderer();
+
+		PlayerRenderer playerRenderer = factory.createPlayerRenderer();
+		BulletRenderer bulletRenderer = factory.createBulletRenderer();
+
+		// Set player position at the bottom center.
+		player = new Player((WIDTH * SCALE - Player.WIDTH) / 2, HEIGHT * SCALE - 50,
+				playerRenderer, bulletRenderer, bullets);
 	}
 
-	public SpritesImageLoader getSprites(){
-		return sprites;
-	}
-	
-	public BulletController getBullets(){
+	public BulletController getBullets() {
 		return bullets;
 	}
-	
+
 	public void keyPressed(KeyEvent e) {
 		int key = e.getKeyCode();
-		
-		switch(key){
+
+		switch (key) {
 			case KeyEvent.VK_RIGHT:
 				player.setVelX(5);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_LEFT:
 				player.setVelX(-5);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_UP:
 				player.setVelY(-5);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_DOWN:
 				player.setVelY(5);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_SPACE:
 				player.shoot();
-			break;
+				break;
 		}
 	}
 
 	public void keyReleased(KeyEvent e) {
 		int key = e.getKeyCode();
-		
-		switch(key){
+
+		switch (key) {
 			case KeyEvent.VK_RIGHT:
 				player.setVelX(0);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_LEFT:
 				player.setVelX(0);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_UP:
 				player.setVelY(0);
-			break;
-			
+				break;
+
 			case KeyEvent.VK_DOWN:
 				player.setVelY(0);
-			break;
-			
+				break;
+
 		}
 	}
-	
-	private synchronized void start(){
-		if(running) return;
-		
+
+	private synchronized void start() {
+		if (running)
+			return;
+
 		running = true;
 		thread = new Thread(this);
 		thread.start();
 	}
-	
-	private synchronized void stop(){
-		if(!running) return;
-		
+
+	private synchronized void stop() {
+		if (!running)
+			return;
+
 		running = false;
 		try {
 			thread.join();
@@ -130,14 +139,14 @@ public class Game extends Canvas implements Runnable {
 		}
 		System.exit(1);
 	}
-	
+
 	/*
-	 * Game thread runner. 
+	 * Game thread runner.
 	 */
 	@Override
 	public void run() {
 		init();
-		
+
 		long lastTime = System.nanoTime();
 		final double numOfTicks = 60.0;
 		double ns = 1000000000 / numOfTicks;
@@ -145,20 +154,20 @@ public class Game extends Canvas implements Runnable {
 		int updates = 0;
 		int frames = 0;
 		long timer = System.currentTimeMillis();
-		
-		while(running){
+
+		while (running) {
 			long now = System.nanoTime();
 			delta += (now - lastTime) / ns;
 			lastTime = now;
-			if(delta >= 1){
+			if (delta >= 1) {
 				tick();
 				updates++;
 				delta--;
 			}
 			render();
 			frames++;
-			
-			if(System.currentTimeMillis() - timer > 1000){
+
+			if (System.currentTimeMillis() - timer > 1000) {
 				timer += 1000;
 				System.out.println(updates + "ticks, fps " + frames);
 				updates = 0;
@@ -167,51 +176,43 @@ public class Game extends Canvas implements Runnable {
 		}
 		stop();
 	}
-	
+
 	/*
 	 * Run the ticks of all game components.
 	 */
-	public void tick(){
+	public void tick() {
 		player.tick();
 		bullets.tick();
 	}
-	
+
 	/*
 	 * Render overall game components.
 	 */
-	public void render(){
+	public void render() {
 		BufferStrategy bs = this.getBufferStrategy();
-		if(bs == null){
+		if (bs == null) {
 			createBufferStrategy(3);
 			return;
 		}
-		
+
 		Graphics g = bs.getDrawGraphics();
 		/////////////////////////////////
-		
-		try {
-			backgRenderer.render(g, this);
-			player.render(g);
-			bullets.render(g);
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		
-		
-		
+		backgRenderer.render(g, this);
+		player.render(g);
+		bullets.render(g);
+
 		////////////////////////////////
 		g.dispose();
 		bs.show();
 	}
-	
-	public static void main(String args[]){		
+
+	public static void main(String args[]) {
 		Game game = new Game();
 		game.setPreferredSize(new Dimension(WIDTH * SCALE, HEIGHT * SCALE));
 		game.setMaximumSize(new Dimension(WIDTH * SCALE, HEIGHT * SCALE));
 		game.setMinimumSize(new Dimension(WIDTH * SCALE, HEIGHT * SCALE));
-		
+
 		JFrame frame = new JFrame(game.TITLE);
 		frame.add(game);
 		frame.pack();
@@ -219,8 +220,8 @@ public class Game extends Canvas implements Runnable {
 		frame.setResizable(false);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
-		
+
 		game.start();
 	}
-	
+
 }
