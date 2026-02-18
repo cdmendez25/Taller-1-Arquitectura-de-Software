@@ -59,7 +59,6 @@ public class Player {
 		x += velX;
 		y += velY;
 
-		// To avoid player go outside the arena.
 		if (x <= 0)
 			x = 0;
 		if (x >= (Game.WIDTH * Game.SCALE) - WIDTH)

@@ -13,7 +13,6 @@ public class VectorPlayerRenderer implements PlayerRenderer {
         int top = (int) y;
         int bottomLeft = (int) y + Player.HEIGHT;
 
-        // Draw the ship as a triangle
         int[] xPoints = { cx, (int) x, (int) x + Player.WIDTH };
         int[] yPoints = { top, bottomLeft, bottomLeft };
         g.drawPolygon(xPoints, yPoints, 3);

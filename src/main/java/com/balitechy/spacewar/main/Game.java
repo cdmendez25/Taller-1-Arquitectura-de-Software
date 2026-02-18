@@ -24,7 +24,6 @@ public class Game extends Canvas implements Runnable {
 	private Thread thread;
 	private BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 
-	// Game components
 	private Player player;
 	private BulletController bullets;
 	private GameBackgroundRenderer backgRenderer;
@@ -32,7 +31,6 @@ public class Game extends Canvas implements Runnable {
 	public void init() {
 		requestFocus();
 
-		// Load configuration
 		Properties config = new Properties();
 		try (InputStream input = getClass().getResourceAsStream("/config.properties")) {
 			config.load(input);
@@ -42,7 +40,6 @@ public class Game extends Canvas implements Runnable {
 
 		String style = config.getProperty("visual.style", "sprite");
 
-		// Create factory based on configuration
 		GameElementFactory factory;
 		if ("vector".equalsIgnoreCase(style)) {
 			factory = new VectorElementFactory();
@@ -50,17 +47,14 @@ public class Game extends Canvas implements Runnable {
 			factory = new SpriteElementFactory();
 		}
 
-		// Add keyboard listener
 		addKeyListener(new InputHandler(this));
 
-		// Initialize game components using the factory
 		bullets = new BulletController();
 		backgRenderer = factory.createBackgroundRenderer();
 
 		PlayerRenderer playerRenderer = factory.createPlayerRenderer();
 		BulletRenderer bulletRenderer = factory.createBulletRenderer();
 
-		// Set player position at the bottom center.
 		player = new Player((WIDTH * SCALE - Player.WIDTH) / 2, HEIGHT * SCALE - 50,
 				playerRenderer, bulletRenderer, bullets);
 	}
@@ -140,9 +134,6 @@ public class Game extends Canvas implements Runnable {
 		System.exit(1);
 	}
 
-	/*
-	 * Game thread runner.
-	 */
 	@Override
 	public void run() {
 		init();
@@ -177,17 +168,11 @@ public class Game extends Canvas implements Runnable {
 		stop();
 	}
 
-	/*
-	 * Run the ticks of all game components.
-	 */
 	public void tick() {
 		player.tick();
 		bullets.tick();
 	}
 
-	/*
-	 * Render overall game components.
-	 */
 	public void render() {
 		BufferStrategy bs = this.getBufferStrategy();
 		if (bs == null) {
@@ -196,13 +181,11 @@ public class Game extends Canvas implements Runnable {
 		}
 
 		Graphics g = bs.getDrawGraphics();
-		/////////////////////////////////
 
 		backgRenderer.render(g, this);
 		player.render(g);
 		bullets.render(g);
 
-		////////////////////////////////
 		g.dispose();
 		bs.show();
 	}
